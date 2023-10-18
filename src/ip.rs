@@ -25,7 +25,7 @@ pub fn parse_address_port(hex_pair: &str) -> Result<(IpAddr, u16)> {
         Ipv6Addr::from(buf).into()
     } else {
         // I don't know what this is ¯\_(ツ)_/¯
-        anyhow::bail!("Uknown length for hex IP address");
+        anyhow::bail!("Unknown length for hex IP address");
     };
 
     let port = u16::from_str_radix(hex_port, 16)?;
