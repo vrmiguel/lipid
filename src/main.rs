@@ -1,11 +1,13 @@
 mod ip;
 mod ports;
 
-use std::os::unix::prelude::OsStrExt;
+use std::{os::unix::prelude::OsStrExt, net::IpAddr};
 
-use anyhow::Context;
 use fs_err as fs;
 use ports::read_active_ports;
+use tabled::{Tabled, Table, settings::Style};
+
+use crate::ports::ActivePort;
 
 pub type Result<T = ()> = anyhow::Result<T>;
 
@@ -26,7 +28,18 @@ fn read_pids() -> Result<impl Iterator<Item = u32>> {
     Ok(pids)
 }
 
+#[derive(Tabled)]
+struct Entry {
+    comm: String,
+    pid: u32,
+    address: IpAddr,
+    port: u16,
+    inode: u32
+}
+
 fn main() -> Result<()> {
+    let mut entries = Vec::new();
+
     let pids = read_pids()?;
     let active_ports = read_active_ports()?;
 
@@ -55,15 +68,20 @@ fn main() -> Result<()> {
                     .find(|active_port| active_port.inode == inode);
 
                 match relevant_port {
-                    Some(active_port) => {
+                    Some(&ActivePort { address, port, inode }) => {
                         let comm = fs::read_to_string(format!("/proc/{pid}/comm"))?;
-                        println!("{comm} {pid} {active_port}")
+                        let comm = comm.trim_end().to_owned();
+                        entries.push(Entry { comm, pid, address, port, inode });
                     },
                     None => continue,
                 }
             }
         }
     }
+
+    let mut table = Table::new(entries);
+    table.with(Style::psql());
+    println!("{table}");
 
     Ok(())
 }
