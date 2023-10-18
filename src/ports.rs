@@ -16,9 +16,9 @@ const LISTEN_STATUS: &str = "0A";
 
 #[derive(Debug, Clone, Copy)]
 pub struct ActivePort {
-    address: IpAddr,
-    port: u16,
-    inode: u32,
+    pub address: IpAddr,
+    pub port: u16,
+    pub inode: u32,
 }
 
 impl Display for ActivePort {
@@ -46,7 +46,9 @@ fn read_active_ports_from<P: AsRef<Path>>(path: P) -> Result<Vec<ActivePort>> {
         let address_and_port = parts.next();
         let _rem_address = parts.next();
         let status = parts.next();
-        let inode = parts.last();
+
+        // nth(5) means we're skipping tx_queue, rx_queue, tr, tm->when, retrnsmt, uid, timeout in order to get to the inode
+        let inode = parts.nth(5);
 
         // If the port in question is not being listened to,
         // skip to the next line
@@ -77,6 +79,7 @@ pub fn read_active_ports() -> Result<Vec<ActivePort>> {
 
     // .. and then join them together
     active_ports.extend_from_slice(&active_ports_ipv6);
+
     Ok(active_ports)
 }
 
